@@ -2231,7 +2231,7 @@ function pvToSan(fen, pv, n = 6) {
 const SQ = /^[a-h][1-8]$/;
 function validateMove(m) {
   return !!m && m.t === 'move' && SQ.test(m.from) && SQ.test(m.to) && Number.isInteger(m.ply) && m.ply > 0 &&
-    (m.promotion === undefined || /^[qrbn]$/.test(m.promotion));
+    (m.promotion === undefined || m.promotion === null || /^[qrbn]$/.test(m.promotion));
 }
 const validUciList = (a) => Array.isArray(a) && a.length < 600 && a.every((u) => typeof u === 'string' && /^[a-h][1-8][a-h][1-8][qrbn]?$/.test(u));
 function replay(uciList) { // returns a Chess or null if any move is illegal
@@ -2472,7 +2472,7 @@ function onNet(m) {
       if (!validateMove(m) || S.result) return; const h = S.chess.history().length;
       if (m.ply <= h) return; if (m.ply > h + 1) return netSend({ t: 'syncreq' });
       if (S.chess.turn() === S.myColor) return; // opponent can only move on their own turn
-      let mv; try { mv = S.chess.move({ from: m.from, to: m.to, promotion: m.promotion }); S.last = [mv.from, mv.to]; }
+      let mv; try { mv = S.chess.move({ from: m.from, to: m.to, promotion: m.promotion || undefined }); S.last = [mv.from, mv.to]; }
       catch { toast(t('e_move')); return netSend({ t: 'syncreq' }); }
       S.sel = null; S.targets = new Map(); clearHint(true); render(); animateMove(mv, S.chess); afterMoveChecks(); break;
     }
@@ -2661,7 +2661,7 @@ function tryMove(from, to) {
 function doMove(m) {
   let mv; try { mv = S.chess.move(m); } catch { return; }
   S.last = [mv.from, mv.to]; S.sel = null; S.targets = new Map(); clearHint(true);
-  if (S.mode === 'friend') netSend({ t: 'move', from: mv.from, to: mv.to, promotion: mv.promotion, ply: S.chess.history().length });
+  if (S.mode === 'friend') { const pm = { t: 'move', from: mv.from, to: mv.to, ply: S.chess.history().length }; if (mv.promotion) pm.promotion = mv.promotion; netSend(pm); }
   render(); animateMove(mv, S.chess); afterMoveChecks();
 }
 function afterMoveChecks() { render(); if (S.mode === 'cpu') cpuTurn(); autoAnalyze(); }
